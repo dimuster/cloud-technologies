@@ -19,17 +19,20 @@
 
 ## **2. Создание плохого Dockerfile**
 
-    FROM ubuntu:latest
+```dockerfile
+# Очень плохой 👿
 
-    RUN apt-get update
-    RUN apt-get install -y python3
-    RUN apt-get install -y python3-pip
+FROM python:latest
+# Ошибочка нет фиксированной версии образа(
+WORKDIR /app
+ADD . /app
+# Ошибочка использование ADD вместо COPY (ужас как так можно)
+RUN pip install flask requests pyyaml
+# Ошибочка установка без requirements.txt и версий (мдээээ)
 
-    WORKDIR /app
-    ADD . .
-    RUN pip install flask requests pyyaml
-
-    CMD ["python3", "app.py"]
+CMD ["python", "app.py"]
+# Ошибочка: запуск от root (без указания USER, оооооо нннеееетттт)
+```
 
 Ошибки здесь очевидны:
 - Используется большой образ Ubuntu
@@ -39,20 +42,33 @@
 ------------------------------------------------------------------------
 
 ## **3. Исправленный хороший Dockerfile**
+```dockerfile
+# хорошенький 😇😇😇
+FROM python:3.9.6  
+#  Мы поменяли) стала конкретная версия образа
 
-    FROM python:3.9.6
+WORKDIR /app
 
-    WORKDIR /app
-    COPY . .
+# Мы поменяли) COPY вместо ADD пупупуппу
+COPY requirements.txt ./
 
-    RUN pip install --no-cache-dir -r requirements.txt
+# Мы поменяли) 
+RUN pip install --no-cache-dir -r requirements.txt
 
-    CMD ["python", "app.py"]
+COPY . .
 
+# Мы поменяли) теперь безопасный запуск
+RUN useradd -m appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+EXPOSE 5000
+CMD ["python", "app.py"]
+```
 ------------------------------------------------------------------------
 
 ## **4. Flask‑приложение**
-
+```dockerfile
 app.py
 
     from flask import Flask, jsonify
@@ -65,6 +81,7 @@ app.py
 
     if __name__ == '__main__':
         app.run(host='0.0.0.0', port=5000)
+```
 
 requirements.txt
 
@@ -76,13 +93,13 @@ requirements.txt
 ------------------------------------------------------------------------
 
 ## **5. Сборка и запуск контейнеров**
-
+```dockerfile
     docker build -f Dockerfile.bad -t lab-bad .
     docker build -f Dockerfile -t lab-good .
     docker run -p 5000:5000 lab-good
-
+```
 Результат:
-{"message": "Hello from container!"}
+{"message": "Hello from container!"} УУУУУРРРРРРРРААААААА 🥳🥳🥳
 
 ------------------------------------------------------------------------
 
@@ -119,5 +136,6 @@ requirements.txt
 Docker.
 После всех тестов контейнер заработал, а сообщение Hello from
 container! стало самым приятным результатом 😄
+
 
 
